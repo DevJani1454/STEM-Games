@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple STEM Games</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            padding: 20px;
+            background: #f0f0f0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        h1, h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .game-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        .game {
+            display: none;
+            text-align: center;
+        }
+
+        .game.active {
+            display: block;
+        }
+
+        #math-problem, #number-sequence {
+            font-size: 24px;
+            margin: 20px 0;
+        }
+
+        .options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .score {
+            font-size: 18px;
+            margin: 20px 0;
+        }
+
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            max-width: 400px;
+            margin: 20px auto;
+        }
+
+        .card {
+            aspect-ratio: 1;
+            background: #2196F3;
+            color: white;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .card.flipped {
+            background: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>STEM Games</h1>
+        
+        <div class="game-buttons">
+            <button onclick="showGame('math')">Math Game</button>
+            <button onclick="showGame('memory')">Memory Game</button>
+            <button onclick="showGame('pattern')">Pattern Game</button>
+        </div>
+
+        <!-- Math Game -->
+        <div id="math-game" class="game active">
+            <h2>Math Game</h2>
+            <div class="score">Score: <span id="math-score">0</span></div>
+            <div id="math-problem"></div>
+            <div class="options" id="math-options"></div>
+        </div>
+
+        <!-- Memory Game -->
+        <div id="memory-game" class="game">
+            <h2>Memory Game</h2>
+            <div class="score">Pairs Found: <span id="memory-score">0</span></div>
+            <div class="memory-grid" id="memory-grid"></div>
+        </div>
+
+        <!-- Pattern Game -->
+        <div id="pattern-game" class="game">
+            <h2>Pattern Game</h2>
+            <div class="score">Score: <span id="pattern-score">0</span></div>
+            <div id="number-sequence"></div>
+            <div class="options" id="pattern-options"></div>
+        </div>
+    </div>
+
+    <script>
+        // Game switching
+        function showGame(game) {
+            document.querySelectorAll('.game').forEach(el => el.classList.remove('active'));
+            document.getElementById(game + '-game').classList.add('active');
+            if (game === 'math') startMathGame();
+            if (game === 'memory') startMemoryGame();
+            if (game === 'pattern') startPatternGame();
+        }
+
+        // Math Game
+        let mathScore = 0;
+        let currentAnswer = 0;
+
+        function startMathGame() {
+            mathScore = 0;
+            document.getElementById('math-score').textContent = mathScore;
+            generateMathProblem();
+        }
+
+        function generateMathProblem() {
+            const num1 = Math.floor(Math.random() * 10) + 1;
+            const num2 = Math.floor(Math.random() * 10) + 1;
+            currentAnswer = num1 + num2;
+
+            document.getElementById('math-problem').textContent = `${num1} + ${num2} = ?`;
+            
+            const options = [
+                currentAnswer,
+                currentAnswer + 1,
+                currentAnswer - 1,
+                currentAnswer + 2
+            ].sort(() => Math.random() - 0.5);
+
+            const optionsContainer = document.getElementById('math-options');
+            optionsContainer.innerHTML = '';
+            options.forEach(option => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                button.onclick = () => checkMathAnswer(option);
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        function checkMathAnswer(answer) {
+            if (answer === currentAnswer) {
+                mathScore++;
+                document.getElementById('math-score').textContent = mathScore;
+            }
+            generateMathProblem();
+        }
+
+        // Memory Game
+        let memoryScore = 0;
+        let flippedCards = [];
+        let matchedPairs = [];
+
+        function startMemoryGame() {
+            memoryScore = 0;
+            flippedCards = [];
+            matchedPairs = [];
+            document.getElementById('memory-score').textContent = memoryScore;
+            
+            const numbers = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8];
+            numbers.sort(() => Math.random() - 0.5);
+
+            const grid = document.getElementById('memory-grid');
+            grid.innerHTML = '';
+            numbers.forEach((num, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.textContent = '?';
+                card.dataset.value = num;
+                card.dataset.index = index;
+                card.onclick = () => flipCard(card);
+                grid.appendChild(card);
+            });
+        }
+
+        function flipCard(card) {
+            if (flippedCards.length === 2 || flippedCards.includes(card) || 
+                matchedPairs.includes(parseInt(card.dataset.value))) return;
+
+            card.textContent = card.dataset.value;
+            card.classList.add('flipped');
+            flippedCards.push(card);
+
+            if (flippedCards.length === 2) {
+                if (flippedCards[0].dataset.value === flippedCards[1].dataset.value) {
+                    matchedPairs.push(parseInt(card.dataset.value));
+                    memoryScore++;
+                    document.getElementById('memory-score').textContent = memoryScore;
+                    flippedCards = [];
+                    if (memoryScore === 8) {
+                        alert('Congratulations! You found all pairs!');
+                        startMemoryGame();
+                    }
+                } else {
+                    setTimeout(() => {
+                        flippedCards.forEach(c => {
+                            c.textContent = '?';
+                            c.classList.remove('flipped');
+                        });
+                        flippedCards = [];
+                    }, 1000);
+                }
+            }
+        }
+
+        // Pattern Game
+        let patternScore = 0;
+        let currentPattern = [];
+        let nextNumber = 0;
+
+        function startPatternGame() {
+            patternScore = 0;
+            document.getElementById('pattern-score').textContent = patternScore;
+            generatePattern();
+        }
+
+        function generatePattern() {
+            const start = Math.floor(Math.random() * 5) + 1;
+            const increment = Math.floor(Math.random() * 3) + 2;
+            currentPattern = [start];
+            
+            for (let i = 0; i < 3; i++) {
+                currentPattern.push(currentPattern[i] + increment);
+            }
+            
+            nextNumber = currentPattern[3];
+            currentPattern.pop();
+
+            document.getElementById('number-sequence').textContent = 
+                currentPattern.join(' → ') + ' → ?';
+
+            const options = [
+                nextNumber,
+                nextNumber + 1,
+                nextNumber - 1,
+                nextNumber + 2
+            ].sort(() => Math.random() - 0.5);
+
+            const optionsContainer = document.getElementById('pattern-options');
+            optionsContainer.innerHTML = '';
+            options.forEach(option => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                button.onclick = () => checkPattern(option);
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        function checkPattern(answer) {
+            if (answer === nextNumber) {
+                patternScore++;
+                document.getElementById('pattern-score').textContent = patternScore;
+            }
+            generatePattern();
+        }
+
+        // Start math game by default
+        startMathGame();
+    </script>
+</body>
+</html>

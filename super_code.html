@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Superhero Code Academy</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+        }
+        #gameContainer {
+            display: flex;
+            gap: 20px;
+            max-width: 1000px;
+        }
+        #codeArea {
+            width: 400px;
+            background-color: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        #code {
+            width: 100%;
+            height: 200px;
+            background-color: #1a1a1a;
+            color: #4CAF50;
+            font-family: monospace;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        #gameCanvas {
+            background-color: #2d2d2d;
+            border-radius: 8px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #instructions {
+            background-color: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            width: 400px;
+        }
+        .command {
+            color: #4CAF50;
+            font-family: monospace;
+        }
+        #message {
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .success {
+            color: #4CAF50;
+        }
+        .error {
+            color: #ff4444;
+        }
+    </style>
+</head>
+<body>
+    <h1>Superhero Code Academy</h1>
+    <div id="instructions">
+        <h3>Level <span id="levelNumber">1</span>: <span id="levelGoal"></span></h3>
+        <p>Available Commands:</p>
+        <ul>
+            <li><span class="command">moveRight(steps)</span> - Move right</li>
+            <li><span class="command">moveLeft(steps)</span> - Move left</li>
+            <li><span class="command">jump()</span> - Jump up</li>
+            <li><span class="command">shootLaser()</span> - Fire laser beam</li>
+            <li><span class="command">dash()</span> - Quick forward dash</li>
+            <li><span class="command">shield()</span> - Activate protective shield</li>
+            <li><span class="command">teleport(x, y)</span> - Teleport to coordinates</li>
+            <li><span class="command">superJump()</span> - Extra high jump</li>
+        </ul>
+    </div>
+    <div id="gameContainer">
+        <div id="codeArea">
+            <textarea id="code">moveRight(2)
+jump()
+shootLaser()</textarea>
+            <button id="runButton" onclick="runCode()">▶ Run Code</button>
+        </div>
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+    </div>
+    <div id="message"></div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let hero = { 
+            x: 50, 
+            y: 350, 
+            width: 30, 
+            height: 30,
+            shieldActive: false
+        };
+        let isRunning = false;
+        let currentLevel = 1;
+        let laser = null;
+
+        const levels = {
+            1: {
+                goal: "Defeat the robot guard!",
+                obstacles: [
+                    { type: 'robot', x: 250, y: 350, width: 30, height: 30 }
+                ],
+                winCondition: (actions) => actions.includes('shootLaser')
+            },
+            2: {
+                goal: "Jump over the pit and dash through the laser!",
+                obstacles: [
+                    { type: 'pit', x: 150, y: 380, width: 100, height: 20 },
+                    { type: 'robot', x: 300, y: 350, width: 30, height: 30 }
+                ],
+                winCondition: (actions) => actions.includes('jump') && actions.includes('dash')
+            },
+            3: {
+                goal: "Use your shield to protect against attacks and teleport to safety!",
+                obstacles: [
+                    { type: 'laser', x: 150, y: 200, width: 100, height: 5 },
+                    { type: 'robot', x: 300, y: 350, width: 30, height: 30 }
+                ],
+                winCondition: (actions) => actions.includes('shield') && actions.includes('teleport')
+            },
+            4: {
+                goal: "Navigate through the obstacle course using all your abilities!",
+                obstacles: [
+                    { type: 'pit', x: 100, y: 380, width: 80, height: 20 },
+                    { type: 'laser', x: 200, y: 200, width: 100, height: 5 },
+                    { type: 'robot', x: 350, y: 350, width: 30, height: 30 }
+                ],
+                winCondition: (actions) => actions.includes('superJump') && actions.includes('shield')
+            }
+        };
+
+        function updateLevel() {
+            document.getElementById('levelNumber').textContent = currentLevel;
+            document.getElementById('levelGoal').textContent = levels[currentLevel].goal;
+        }
+
+        function drawHero() {
+            ctx.fillStyle = hero.shieldActive ? '#87CEEB' : '#3498db';
+            ctx.fillRect(hero.x, hero.y, hero.width, hero.height);
+            if (hero.shieldActive) {
+                ctx.strokeStyle = '#4CAF50';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(hero.x - 5, hero.y - 5, hero.width + 10, hero.height + 10);
+            }
+        }
+
+        function drawObstacles() {
+            levels[currentLevel].obstacles.forEach(obstacle => {
+                switch(obstacle.type) {
+                    case 'robot':
+                        ctx.fillStyle = '#e74c3c';
+                        ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                        break;
+                    case 'pit':
+                        ctx.fillStyle = '#f1c40f';
+                        ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                        break;
+                    case 'laser':
+                        ctx.fillStyle = '#e74c3c';
+                        ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                        break;
+                }
+            });
+        }
+
+        function drawLaser() {
+            if (laser) {
+                ctx.fillStyle = '#e74c3c';
+                ctx.fillRect(laser.x, laser.y, laser.width, laser.height);
+                laser.x += 10;
+                if (laser.x > canvas.width) {
+                    laser = null;
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawHero();
+            drawObstacles();
+            drawLaser();
+            if (isRunning) {
+                requestAnimationFrame(draw);
+            }
+        }
+
+        let actions = [];
+
+        const commands = {
+            moveRight: (steps = 1) => {
+                hero.x += steps * 30;
+                actions.push('moveRight');
+            },
+            moveLeft: (steps = 1) => {
+                hero.x -= steps * 30;
+                actions.push('moveLeft');
+            },
+            jump: () => {
+                let startY = hero.y;
+                let jumpHeight = 100;
+                let duration = 500;
+                let startTime = Date.now();
+
+                function jumpAnimation() {
+                    let currentTime = Date.now();
+                    let elapsed = currentTime - startTime;
+                    let progress = elapsed / duration;
+
+                    if (progress < 1) {
+                        hero.y = startY - Math.sin(progress * Math.PI) * jumpHeight;
+                        requestAnimationFrame(jumpAnimation);
+                    } else {
+                        hero.y = startY;
+                    }
+                }
+
+                actions.push('jump');
+                jumpAnimation();
+            },
+            superJump: () => {
+                let startY = hero.y;
+                let jumpHeight = 200;
+                let duration = 800;
+                let startTime = Date.now();
+
+                function jumpAnimation() {
+                    let currentTime = Date.now();
+                    let elapsed = currentTime - startTime;
+                    let progress = elapsed / duration;
+
+                    if (progress < 1) {
+                        hero.y = startY - Math.sin(progress * Math.PI) * jumpHeight;
+                        requestAnimationFrame(jumpAnimation);
+                    } else {
+                        hero.y = startY;
+                    }
+                }
+
+                actions.push('superJump');
+                jumpAnimation();
+            },
+            shootLaser: () => {
+                laser = {
+                    x: hero.x + hero.width,
+                    y: hero.y + hero.height/2,
+                    width: 20,
+                    height: 4
+                };
+                actions.push('shootLaser');
+            },
+            dash: () => {
+                hero.x += 100;
+                actions.push('dash');
+            },
+            shield: () => {
+                hero.shieldActive = true;
+                setTimeout(() => {
+                    hero.shieldActive = false;
+                }, 2000);
+                actions.push('shield');
+            },
+            teleport: (x, y) => {
+                hero.x = x;
+                hero.y = y;
+                actions.push('teleport');
+            }
+        };
+
+        function runCode() {
+            if (isRunning) return;
+            
+            isRunning = true;
+            actions = [];
+            hero = { x: 50, y: 350, width: 30, height: 30, shieldActive: false };
+            document.getElementById('runButton').disabled = true;
+            
+            const code = document.getElementById('code').value;
+            const lines = code.split('\n');
+            
+            let lineIndex = 0;
+            
+            function executeLine() {
+                if (lineIndex < lines.length) {
+                    const line = lines[lineIndex].trim();
+                    try {
+                        eval(`commands.${line}`);
+                        setTimeout(() => {
+                            lineIndex++;
+                            executeLine();
+                        }, 1000);
+                    } catch (error) {
+                        showMessage('Invalid command!', false);
+                        endExecution();
+                    }
+                } else {
+                    setTimeout(() => {
+                        checkWinCondition();
+                    }, 1000);
+                }
+            }
+            
+            draw();
+            executeLine();
+        }
+
+        function showMessage(text, isSuccess) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = isSuccess ? 'success' : 'error';
+        }
+
+        function endExecution() {
+            isRunning = false;
+            document.getElementById('runButton').disabled = false;
+        }
+
+        function checkWinCondition() {
+            if (levels[currentLevel].winCondition(actions)) {
+                showMessage('Success! Level Complete!', true);
+                setTimeout(() => {
+                    if (currentLevel < Object.keys(levels).length) {
+                        currentLevel++;
+                        updateLevel();
+                        document.getElementById('code').value = '';
+                        showMessage('', true);
+                    } else {
+                        showMessage('Congratulations! You completed all levels!', true);
+                    }
+                }, 1500);
+            } else {
+                showMessage('Try again!', false);
+            }
+            endExecution();
+        }
+
+        updateLevel();
+        draw();
+    </script>
+</body>
+</html>
